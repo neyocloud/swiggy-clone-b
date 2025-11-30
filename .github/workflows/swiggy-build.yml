@@ -21,4 +21,8 @@ jobs:
           SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
 
       - name: Trivy File Scan
-        run: trivy fs . > trivyfs.txt
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: fs
+          scan-ref: .
+          output: trivyfs.txt
