@@ -37,3 +37,7 @@ jobs:
           registry: docker.io
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Trivy Image Scan
+        run: trivy image ashfaque9x/swiggy-app > trivyimage.txt
+   
