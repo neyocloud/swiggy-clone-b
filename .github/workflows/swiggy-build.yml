@@ -9,11 +9,13 @@ jobs:
   build:
     name: Build
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
         with:
-          fetch-depth: 0 # Shallow clones should be disabled for a better relevancy of analysis
+          fetch-depth: 0
+
       - name: Build and analyze with SonarQube
         uses: sonarsource/sonarqube-scan-action@master
         env:
@@ -26,3 +28,12 @@ jobs:
           scan-type: fs
           scan-ref: .
           output: trivyfs.txt
+
+
+      - name: Docker Build and Push
+        uses: mr-smithers-excellent/docker-build-push@v6
+        with:
+          image: neyocicd/swiggy-app
+          registry: docker.io
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
