@@ -73,6 +73,12 @@ jobs:
       - name: Update kubeconfig
         run: aws eks update-kubeconfig --region us-east-1 --name virtualtechbox-cluster
 
+      - name: Write kubeconfig
+        run: |
+            mkdir -p ~/.kube
+            echo "${{ secrets.KUBECONFIG_DATA }}" > ~/.kube/config
+            chmod 600 ~/.kube/config  
+
       - name: Deploy to Kubernetes
         run: kubectl apply -f deployment-and-service.yml
 
