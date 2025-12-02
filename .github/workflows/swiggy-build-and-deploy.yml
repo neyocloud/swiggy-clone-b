@@ -6,7 +6,7 @@ on:
       - main
 
 jobs:
-  build:
+  build-analyze-scan:
     name: Build
     runs-on: ubuntu-latest
 
@@ -41,14 +41,27 @@ jobs:
       - name: Trivy Image Scan
         run: trivy image ashfaque9x/swiggy-app > trivyimage.txt
 
-      - name: Send a Slack Notification
-        if: always()
-        uses: act10ns/slack@v1
-        with:
+
+
+  Deploy:
+   needs: build-analyze-scan
+   runs-on: ubuntu-latest
+   steps:
+    - name: Update kubeconfig
+      run: aws eks --region us-east-1 update-kubeconfig --name virtualtechbox-cluster
+
+    - name: Deploy to Kubernetes
+      run: kubectl apply -f deployment-and-service.yml
+   
+
+    - name: Send a Slack Notification
+      if: always()
+      uses: act10ns/slack@v1
+      with:
           status: ${{ job.status }}
           steps: ${{ toJson(steps) }}
           channel: '#github-action'
-        env:
-             SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+      env:
+            SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
   
    
