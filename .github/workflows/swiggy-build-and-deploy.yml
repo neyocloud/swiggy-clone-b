@@ -7,7 +7,7 @@ on:
 
 jobs:
   build-analyze-scan:
-    name: Build
+    name: Build-Analyze-Scan
     runs-on: ubuntu-latest
 
     steps:
@@ -29,7 +29,6 @@ jobs:
           scan-ref: .
           output: trivyfs.txt
 
-
       - name: Docker Build and Push
         uses: mr-smithers-excellent/docker-build-push@v6
         with:
@@ -39,29 +38,46 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Trivy Image Scan
-        run: trivy image ashfaque9x/swiggy-app > trivyimage.txt
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: neyocicd/swiggy-app:latest
+          format: table
+          output: trivyimage.txt
 
 
+  deploy:
+    name: Deploy
+    needs: build-analyze-scan
+    runs-on: ubuntu-latest
 
-  Deploy:
-   needs: build-analyze-scan
-   runs-on: ubuntu-latest
-   steps:
-    - name: Update kubeconfig
-      run: aws eks --region us-east-1 update-kubeconfig --name virtualtechbox-cluster
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
 
-    - name: Deploy to Kubernetes
-      run: kubectl apply -f deployment-and-service.yml
-   
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
 
-    - name: Send a Slack Notification
-      if: always()
-      uses: act10ns/slack@v1
-      with:
+      - name: Setup kubectl
+        uses: azure/setup-kubectl@v4
+        with:
+          version: "v1.32.0"
+
+      - name: Update kubeconfig
+        run: aws eks update-kubeconfig --region us-east-1 --name virtualtechbox-cluster
+
+      - name: Deploy to Kubernetes
+        run: kubectl apply -f deployment-and-service.yml
+
+      - name: Send a Slack Notification
+        if: always()
+        uses: act10ns/slack@v1
+        with:
           status: ${{ job.status }}
           steps: ${{ toJson(steps) }}
           channel: '#github-action'
-      env:
-            SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-  
-   
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
