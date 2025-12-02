@@ -81,10 +81,9 @@ jobs:
 
       - name: Configure kubeconfig for EKS
         run: |
-          mkdir -p ~/.kube
-          aws eks update-kubeconfig \
-          --name virtualtechbox-cluster \
-          --region us-east-1
+           aws eks update-kubeconfig \
+           --name virtualtechbox-cluster \
+           --region us-east-1
 
 
       # ✅ Quick proof kubeconfig works
