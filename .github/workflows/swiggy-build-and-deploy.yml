@@ -54,7 +54,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
 
-
+      # AWS creds still needed so kubectl can auth via eks token
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -70,14 +70,16 @@ jobs:
         with:
           version: "v1.32.0"
 
-      - name: Update kubeconfig
-        run: aws eks update-kubeconfig --region us-east-1 --name virtualtechbox-cluster
-
+      # ✅ Write kubeconfig properly (base64 decode)
       - name: Write kubeconfig
         run: |
-            mkdir -p ~/.kube
-            echo "${{ secrets.KUBECONFIG_DATA }}" > ~/.kube/config
-            chmod 600 ~/.kube/config  
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBECONFIG_DATA }}" | base64 -d > ~/.kube/config
+          chmod 600 ~/.kube/config
+
+      # ✅ Quick proof kubeconfig works
+      - name: Verify cluster access
+        run: kubectl get nodes
 
       - name: Deploy to Kubernetes
         run: kubectl apply -f deployment-and-service.yml
