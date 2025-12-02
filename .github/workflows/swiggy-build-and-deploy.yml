@@ -78,11 +78,13 @@ jobs:
           version: "v1.32.0"
 
       # ✅ Write kubeconfig properly (base64 decode)
-      - name: Write kubeconfig
+
+      - name: Configure kubeconfig for EKS
         run: |
-           mkdir -p ~/.kube
-           printf '%s' "${{ secrets.KUBECONFIG_B64 }}" | tr -d '\n' | base64 -d > ~/.kube/config
-           chmod 600 ~/.kube/config
+          mkdir -p ~/.kube
+          aws eks update-kubeconfig \
+          --name virtualtechbox-cluster \
+          --region us-east-1
 
 
       # ✅ Quick proof kubeconfig works
