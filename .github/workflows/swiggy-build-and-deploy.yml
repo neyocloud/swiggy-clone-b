@@ -36,10 +36,17 @@ jobs:
           registry: docker.io
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
+          tags: latest
 
+      - name: Wait for DockerHub to publish latest
+        run: sleep 15
+ 
+
+          
       - name: Trivy Image Scan
         uses: aquasecurity/trivy-action@master
         with:
+          scan-type: image
           image-ref: neyocicd/swiggy-app:latest
           format: table
           output: trivyimage.txt
