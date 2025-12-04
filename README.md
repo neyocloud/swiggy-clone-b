@@ -319,6 +319,193 @@ The if: always() ensures the Slack step runs even if earlier steps fail, so we g
 
 
 
+### Creating an EKS Cluster with eksctl
+
+For the deployment environment, I made use Amazon Elastic Kubernetes Service (EKS) to host our application in a Kubernetes cluster. I provisioned a new EKS cluster using eksctl, which is a handy CLI to create EKS clusters quickly.
+
+eksctl Cluster Creation: We ran the following command from our terminal to create a cluster (the EC2 runner or any machine with AWS CLI/eksctl configured could run this, but we did it locally for setup):
+
+
+```
+eksctl create cluster --name=virtualtechbox-cluster --region=ap-south-1 --nodes=2 --node-type=t3.small
+```
+
+This command creates a managed EKS cluster named “virtualtechbox-cluster” in the specified region with two worker nodes. It sets up the control plane, node group, and default configuration. The process takes several minutes. After completion, eksctl automatically updates the local Kubeconfig (usually ~/.kube/config) with the new cluster’s access credentials
+
+
+
+
+AWS Credentials: We ensured that the AWS credentials used for cluster creation have the necessary permissions (IAM role or user with EKS and EC2 permissions). In our pipeline, we also need AWS credentials to deploy to EKS. We stored an IAM user’s access key and secret (with appropriate EKS/Kubernetes permissions) in GitHub Secrets (AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY). The pipeline uses these for authenticating to AWS.
+
+kubectl and Config: The cluster’s credentials from eksctl can be used in the GitHub Actions environment. We either exported the kubeconfig as an artifact or re-generated it in the workflow. A simpler approach in Actions is to use the AWS CLI to re-create kubeconfig on the runner, which we’ll do in the next section.
+
+(Note: For a real production scenario, one might use infrastructure-as-code (Terraform or CloudFormation) for EKS as well, but eksctl is sufficient and faster for this demonstration.)
+
+
+
+
+### Deploying to EKS via GitHub Actions
+
+With the EKS cluster ready, the second job of our GitHub Actions workflow handles deploying the latest Docker image to the cluster. This job runs after the build/scan job, and only if the first part succeeds. It uses AWS credentials and kubectl to apply Kubernetes manifests.
+
+Job Dependencies: Our workflow is configured so that the “Deploy” job depends on the “Build-Analyze-Scan” job. In YAML, we set needs: [build-scan] for the deploy job. This ensures we only deploy if the build, analysis, and scans were successful.
+
+Setting up kubectl: First, the job installs or ensures kubectl is available. We used the azure/setup-kubectl@v2 action (a GitHub-maintained action) to install a specific kubectl version compatible with our EKS version
+
+ 
+ For example:
+```
+- name: Install kubectl
+  uses: azure/setup-kubectl@v2
+  with:
+    version: 'v1.27.0'   # match EKS cluster's Kubernetes version
+```
+
+AWS Credentials in Workflow: Next, we configure AWS credentials in the job environment. We use the AWS Actions module:
+
+
+```
+- name: Configure AWS Credentials
+  uses: aws-actions/configure-aws-credentials@v2
+  with:
+    aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+    aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+    aws-region: us-east-1
+```
+
+This exports the AWS creds so that AWS CLI and kubectl (with AWS IAM Auth) can function in subsequent steps
+
+
+
+Updating Kubeconfig: To allow kubectl to talk to our EKS cluster, we update the Kubernetes config for the cluster. We did this by running:
+
+
+```
+- name: Configure kubeconfig for EKS
+  run: aws eks update-kubeconfig --name virtualtechbox-cluster --region us-east-1
+```
+
+This command fetches the cluster’s endpoint and credentials and merges them into ~/.kube/config on the runner
+
+ 
+ Essentially, it makes sure kubectl commands know which cluster to operate on.
+
+Deploying the Application: We have Kubernetes manifest files in our repository (e.g., deployment.yaml and service.yaml) describing how to run our container in EKS. The deployment manifest uses the Docker image we pushed earlier. We apply these manifests:
+
+
+```
+- name: Deploy to EKS
+  run: |
+    kubectl apply -f k8s/deployment.yaml 
+    kubectl apply -f k8s/service.yaml
+```
+
+This creates/updates the Deployment and Service in the cluster
+
+
+Kubernetes then pulls the Docker image from Docker Hub and starts the pods on the EKS worker nodes.
+
+
+
+Slack Notification: (As described above in Slack section) The final step in this job posts a Slack message about the deployment status.
+
+GitHub Actions pipeline – “Build-Analyze-Scan” job (self-hosted runner) succeeded, including steps for code checkout, SonarQube analysis, Trivy scan, Docker build/push, and Trivy image scan.
+
+
+<img width="3024" height="1964" alt="image" src="https://github.com/user-attachments/assets/65f2e5b5-bbd2-4b1e-9f8e-d7fc86a76552" />
+
+
+
+GitHub Actions pipeline – “Deploy” job succeeded, showing AWS credentials setup, kubectl config, deployment to EKS, and Slack notification steps.
+
+
+<img width="3024" height="1964" alt="image" src="https://github.com/user-attachments/assets/8be8ba6b-b365-4aac-9b85-803fb2a962f7" />
+
+
+
+
+In the screenshots above, you can see our two workflow jobs in GitHub Actions. The first job runs on ubuntu latest and performs the build, analysis, and scanning steps. The second job then deploys to AWS EKS and notifies Slack. Both jobs have succeeded, indicating our pipeline worked end-to-end.
+
+Pipeline Validation and Verification
+
+After the pipeline ran, we performed a few checks to validate that everything worked as expected:
+
+GitHub Actions Logs: We reviewed the workflow run in GitHub Actions (as shown in the screenshots) to ensure each step completed. The logs confirmed that SonarQube analysis was successful (the scanner reported results to our SonarQube server), Trivy scans completed (with output of any findings), the Docker image built and pushed without errors, and the Kubernetes deployment was applied. Seeing green checkmarks on all steps and jobs is a good sign that the CI/CD pipeline executed flawlessly.
+
+SonarQube Dashboard: We logged into SonarQube and checked the project dashboard. The latest analysis corresponding to the pipeline run was present. We could see metrics like code coverage (if configured), code smells, vulnerabilities, etc., giving us confidence in code quality. SonarQube integration means any new issue introduced by a commit would be visible here immediately.
+
+
+<img width="1226" height="732" alt="image" src="https://github.com/user-attachments/assets/472f4fab-01b6-438d-b798-10fec36ebf7a" />
+
+
+
+Kubernetes Resources: We used kubectl to verify the application is running in the EKS cluster......
+
+
+```
+kubectl get pods
+kubectl get svc
+```
+
+These commands showed an active Deployment (e.g., swiggy-app deployment with the desired number of pods running) and a Service exposing it.
+
+
+
+
+
+
+We also port-forwarded or hit the Service’s external LoadBalancer (if configured) to ensure the app was reachable. This confirms the deployment part of the pipeline succeeded and the new Docker image is running on EKS.
+
+Slack Message: We checked Slack and found the notification from the pipeline. The message indicated a successful deployment, along with commit info. This real-time confirmation is useful for the team to know the status. In case of a failure, the Slack message would have alerted us immediately with the failure status and we could drill into logs via the GitHub link.
+
+By cross-verifying in SonarQube, the EKS cluster, and Slack, we ensured that each integration in the pipeline (code analysis, security scan, deployment, and notification) worked correctly. The pipeline not only ran without errors, but it also achieved the intended outcomes: high confidence in code & image quality and automated deployment.
+
+
+
+### Cleanup and Teardown
+
+
+
+After validating the pipeline, we cleaned up the resources to avoid ongoing costs and keep the environment tidy:
+
+Kubernetes Deployments: We deleted the deployed application from the EKS cluster (especially since this was a demo deployment). Using kubectl:
+
+
+```
+kubectl delete deployment swiggy-app
+kubectl delete service swiggy-app
+```
+
+(Replace swiggy-app with your deployment/service names.) This scales down and removes the app from the cluster.
+
+EKS Cluster: Since the cluster was created for demonstration, we tore it down to avoid AWS charges. We used eksctl to delete the cluster:
+
+```
+eksctl delete cluster --name=virtualtechbox-cluster --region=us-east-1
+```
+
+
+<img width="2310" height="1274" alt="image" src="https://github.com/user-attachments/assets/a3cdd819-5a0f-4090-a6eb-a827f3cba7b7" />
+
+
+
+
+This command deletes the EKS control plane and all associated resources (like node groups, networking, etc.). It may take a few minutes to complete. The eksctl output shows the progress of deleting stacks and confirms when everything is deleted
+
+
+
+
+We revoked any temporary credentials or tokens if needed (for example, the SonarQube token or Slack token can be kept for future use, but if this were a one-off, you might remove the project or regenerate tokens). Docker Hub repository can be cleaned if desired by removing the test image tag.
+
+
+
+After these steps, the AWS environment was back to baseline (no cluster, no app running, no EC2), and thus we avoid incurring costs. The repository remains configured, so one can re-provision and rerun the pipeline at any time. Cleanup is a best practice to include in documentation to highlight responsible usage of cloud resources and to demonstrate thoroughness in the DevOps workflow.
+
+
+
+
+
+In conclusion this project’s README has documented how we set up a comprehensive CI/CD pipeline integrating Terraform, GitHub Actions, SonarQube, Trivy, Slack, and AWS EKS. The pipeline automates code quality checks, security scans, Docker builds, and deployment to Kubernetes, reflecting a production-like DevOps lifecycle. By following this approach, teams can achieve rapid and safe code delivery with immediate feedback at each stage. This demonstration not only underscores proficiency in various DevOps tools and practices but also emphasizes the value of automating quality and security into the CI/CD process (DevSecOps) for robust software delivery
 
 
 
