@@ -15,13 +15,11 @@ Introduction
 
 This project demonstrates a full CI/CD DevOps pipeline that builds, analyzes, secures, and deploys a containerized application using GitHub Actions. The pipeline is designed to showcase DevOps best practices end-to-end, from infrastructure provisioning to continuous deployment on Kubernetes. Key components include:
 
-
-
 Infrastructure as Code (Terraform): Automating creation of an AWS EC2 instance to host a self-hosted GitHub Actions runner, Docker engine, and a SonarQube server.
 
 Code Quality Analysis (SonarQube): Integrating SonarQube for static code analysis to improve code quality (catch bugs, code smells, etc.).
 
-Security Scanning (Trivy): Performing security scans on source code (files and dependencies) as well as container images to detect vulnerabilities, misconfigurations, and secrets early
+Security Scanning (Trivy): Performing security scans on source code (files and dependencies) as well as container images to detect vulnerabilities, misconfigurations, and secrets early.
 
 Containerization (Docker): Building a Docker image of the application and pushing it to a registry (e.g. Docker Hub).
 
@@ -29,18 +27,16 @@ Continuous Deployment to Kubernetes (EKS): Deploying the Docker image to an AWS 
 
 Notifications (Slack): Sending Slack notifications on pipeline results for real-time feedback to the team.
 
+
+
 **The goal is to implement a robust pipeline that ensures code quality and security at each stage (using SonarQube and Trivy scans) and automates deployment to a production-like environment (AWS EKS). This end-to-end setup highlights strong DevOps skills in infrastructure provisioning, CI/CD automation, security (DevSecOps), and cloud orchestration, which would be clear and impressive to recruiters and interviewers.*
 
+Creating the EC2 Infrastructure with Terraform (Self-Hosted Runner Host)
+To have more control over the CI environment, I used a self-hosted GitHub Actions runner on AWS. I provisioned an EC2 instance using Terraform as my runner host (which also runs Docker and SonarQube). Terraform allowed me to define this infrastructure as code, ensuring repeatability and consistency. Key steps include:
 
+Terraform Configuration: I wrote Terraform configs to define an EC2 instance (Ubuntu 20.04) with the required security group rules. For example, I opened port 22 for SSH, port 9000 for SonarQube’s web UI, and any needed ports for runner communication (GitHub runners use outbound HTTPS).
 
-
-## Creating the EC2 Infrastructure with Terraform (Self-Hosted Runner Host)
-
-To have more control over the CI environment, we use a self-hosted GitHub Actions runner on AWS. We provisioned an EC2 instance using Terraform as our runner host (which also runs Docker and SonarQube). Terraform allows us to define this infrastructure as code, ensuring repeatability and consistency. Key steps include:
-
-Terraform Configuration: We wrote Terraform configs to define an EC2 instance (Ubuntu 20.04) with the required security group rules. For example, we opened port 22 for SSH, port 9000 for SonarQube’s web UI, and any needed ports for runner communication (GitHub runners use outbound HTTPS).
-
-Applying Terraform: Using Termius (or any terminal), we ran Terraform commands to create the resources:
+Applying Terraform: Using Termius (or any terminal), I ran Terraform commands to create the resources:
 
 
 ```
@@ -50,12 +46,11 @@ terraform apply -auto-approve   # Create EC2 instance and related infrastructure
 
 ```
 
-After apply, Terraform outputs the new EC2’s public IP
+After apply, Terraform outputs the new EC2’s public IP.
 
+I used that IP to SSH into the server.
 
-We use that IP to SSH into the server.
-
-Instance Setup: Once the EC2 is up, we SSH in and install necessary tools: Docker (to run SonarQube and for building images), and any dependencies for the runner. For example:
+Instance Setup: Once the EC2 was up, I SSH’d in and installed the necessary tools: Docker (to run SonarQube and to build images), and any dependencies required for the runner. For example:
 
 
 
@@ -63,7 +58,7 @@ Instance Setup: Once the EC2 is up, we SSH in and install necessary tools: Docke
 
 
 
-We then launch a SonarQube container on this host and ensure it’s accessible on port 9000:
+I then launched a SonarQube container on this host and ensured it was accessible on port 9000:
 
 
 ```
@@ -80,7 +75,7 @@ Running CI on GitHub-Hosted Runner (ubuntu-latest)
 
 With the EC2 server up and running Docker and SonarQube, the next step was to run our CI pipeline using a GitHub-hosted runner instead of a self-hosted one. This means the workflow executes on GitHub’s infrastructure (ubuntu-latest), and connects to the tools we set up on EC2 over the network.
 
-Using a GitHub-Hosted Runner: In our GitHub Actions workflow, we didn’t add or register any self-hosted runner. Instead, we kept the default GitHub runner by specifying ubuntu-latest in the YAML. For example:
+Using a GitHub-Hosted Runner: In our GitHub Actions workflow, i didn’t add or register any self-hosted runner. Instead, I kept the default GitHub runner by specifying ubuntu-latest in the YAML. For example:
 
 ```
 jobs:
@@ -90,7 +85,7 @@ runs-on: ubuntu-latest # GitHub-hosted runner
 ```
 
 
-We also configured required credentials as encrypted secret keys in the repository (GitHub Secrets) to securely support the CI/CD pipeline.
+I also configured required credentials as encrypted secret keys in the repository (GitHub Secrets) to securely support the CI/CD pipeline.
 
 <img width="3024" height="1964" alt="image" src="https://github.com/user-attachments/assets/453177be-9fb3-4ded-8aef-37a5c8c9d2ed" />
 
@@ -142,7 +137,7 @@ Running Trivy in the Workflow: We integrated Trivy via a GitHub Action. after co
 This action downloads Trivy and scans the code (all folders) for vulnerabilities, secrets, and misconfigurations
 
 
-We chose to allow the job to continue even if issues are found (exit-code: 0), so that the pipeline can proceed (you might instead fail the build on high-severity issues in a stricter scenario). The results are logged in the workflow. For instance, Trivy would list any CVEs in our application dependencies, any AWS credential leaks or hardcoded secrets, and any insecure configurations (like a Terraform file with an open security group). This automated scan helps “identify vulnerabilities before they make it to production”
+I allowed the job to continue even if issues are found (exit-code: 0), so that the pipeline can proceed (you might instead fail the build on high-severity issues in a stricter scenario). The results are logged in the workflow. For instance, Trivy would list any CVEs in our application dependencies, any AWS credential leaks or hardcoded secrets, and any insecure configurations (like a Terraform file with an open security group). This automated scan helps “identify vulnerabilities before they make it to production”
 
 
 
@@ -163,7 +158,7 @@ After code is analyzed and cleared, the pipeline builds a Docker image for the a
 
 
 
-Building the Docker Image: In the GitHub Actions workflow, we use Docker to build the image from our Dockerfile. Since we have Docker installed, we can either run Docker commands directly or use the Docker Buildx GitHub Action. We opted to run the commands directly for transparency. For example, our workflow has a step:
+Building the Docker Image: In the GitHub Actions workflow, I used Docker to build the image from our Dockerfile. Since we have Docker installed, we can either run Docker commands directly or use the Docker Buildx GitHub Action. We opted to run the commands directly for transparency. For example, our workflow has a step:
 
 
 ```
@@ -171,9 +166,9 @@ Building the Docker Image: In the GitHub Actions workflow, we use Docker to buil
   run: docker build -t myapp:latest 
 ```
 
-This instructs Docker to build an image tagged myapp:latest from the repository’s Dockerfile. (If needed, we could also build multiple tags, e.g., commit SHA tag for versioning.)
+This instructs Docker to build an image tagged myapp:latest from the repository’s Dockerfile. (If needed, I could also build multiple tags, e.g., commit SHA tag for versioning.)
 
-Authenticating to Registry: We chose Docker Hub as the container registry (for simplicity and because our EKS cluster can pull public images from Docker Hub easily). We created a Docker Hub repository and added our Docker Hub credentials (username and an access token) as GitHub secrets. These secrets (DOCKER_USERNAME and DOCKERHUB_TOKEN) allow the workflow to log in to Docker Hub
+Authenticating to Registry: I chose Docker Hub as the container registry (for simplicity and because our EKS cluster can pull public images from Docker Hub easily). We created a Docker Hub repository and added our Docker Hub credentials (username and an access token) as GitHub secrets. These secrets (DOCKER_USERNAME and DOCKERHUB_TOKEN) allow the workflow to log in to Docker Hub
 docs.docker.com
 
 
@@ -185,9 +180,9 @@ docs.docker.com
   run: echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
 ```
 
-This logs in the Docker CLI to Docker Hub using our saved credentials (without exposing them in logs).
+This logs in the Docker CLI to Docker Hub using my saved credentials (without exposing them in logs).
 
-Pushing the Image: Once logged in, we push the image to the Docker Hub repository. We tag the image with the repo name, then push:
+Pushing the Image: Once logged in, I pushed the image to the Docker Hub repository. I tagged the image with the repo name, then push:
 
 
 <img width="3024" height="1964" alt="image" src="https://github.com/user-attachments/assets/9bcc35c8-3d39-4940-b4a0-0946e04653fb" />
@@ -201,21 +196,18 @@ Pushing the Image: Once logged in, we push the image to the Docker Hub repositor
     docker push ${{ secrets.DOCKER_USERNAME }}/myapp:latest
 ```
 
-This publishes the Docker image to Docker Hub (e.g., dockerhubuser/myapp:latest). In our case, the workflow waited briefly for Docker Hub to process the new image tag (ensuring it’s available for the next step).
 
-By the end of this stage, our CI pipeline has produced a versioned Docker image of the application and stored it in a registry, ready for deployment. Using GitHub Actions to automate build and push ensures that any commit to the repo results in a fresh container image, eliminating “it works on my machine” issues.
+This publishes the Docker image to Docker Hub (e.g., dockerhubuser/myapp:latest). In my case, the workflow waited briefly for Docker Hub to process the new image tag (ensuring it was available for the next step).
 
+By the end of this stage, my CI pipeline had produced a versioned Docker image of the application and stored it in a registry, ready for deployment. Using GitHub Actions to automate the build and push ensured that every commit to the repo resulted in a fresh container image, eliminating “it works on my machine” issues.
 
+Container Image Vulnerability Scanning with Trivy
 
-### Container Image Vulnerability Scanning with Trivy
+After pushing the Docker image, my pipeline performed a Trivy scan on the image to detect vulnerabilities in the image’s OS packages or libraries. This added another layer of security by scanning the final artifact that would run in production.
 
-After pushing the Docker image, the pipeline performs a Trivy scan on the image to detect any vulnerabilities in the image’s OS packages or libraries. This adds another layer of security by scanning the final artifact that will run in production.
+**Why Image Scanning:** Even if my source dependencies were clean, vulnerabilities could still be introduced via the base image (e.g., OS packages). Trivy’s image scan checks for known CVEs in the image layers. This helps me catch critical issues in the container (for example, a critical CVE in the base Linux distribution) before deployment.
 
-Why Image Scanning: Even if our source dependencies were clean, vulnerabilities could be introduced via the base image (e.g., OS packages). Trivy’s image scan checks for known CVEs in the image layers. This helps catch critical issues in the container (for example, a critical CVE in the base Linux distribution) before deployment
-
-
-
-Trivy Image Scan in Workflow: We again use the Aqua Security action, but in image mode. The step in YAML looks like:
+**Trivy Image Scan in Workflow:** I again used the Aqua Security action, but in image mode. The step in YAML looks like:
 
 
 ```
@@ -237,7 +229,7 @@ The scan results (a table of any found CVEs with severity) are printed in the jo
 
 
 
-Sample Trivy Image Output: Your Trivy might output something like:
+**Sample Trivy Image Output:** Your Trivy might output something like:
 
 
 
@@ -251,15 +243,13 @@ HIGH     CVE-2022-YYYY – libcurl – Fixed in 7.85.0 – Vulnerability details
 
 
 
-This tells us what to patch or update. By having this step, we demonstrate a proactive stance on container security: any issues in the image are immediately known and can be addressed before or after deployment as needed.
-
-
+This tells me what to patch or update. By having this step, I demonstrate a proactive stance on container security: any issues in the image are immediately known and can be addressed before or after deployment as needed.
 
 
 Slack Notifications for CI/CD Feedback
 
-To keep the team informed of pipeline results, we integrated Slack notifications into the GitHub Actions workflow. This means that whenever a build/deploy succeeds or fails, a message is sent to a specified Slack channel.
 
+To stay informed of my pipeline results, I integrated Slack notifications into my GitHub Actions workflow. This means that whenever a build or deployment succeeds or fails, a message is sent to my specified Slack channel.
 
 
 <img width="3024" height="1964" alt="image" src="https://github.com/user-attachments/assets/b27eb00c-1650-4cc0-9269-d9c114fa9bd9" />
@@ -277,11 +267,11 @@ Immediate failure alerts can significantly reduce time to response and fix, impr
 
 
 
-Slack App Setup: We created a Slack app incoming webhook for our workspace. The simplest method is using an Incoming Webhook URL (which posts to a channel). Alternatively, one can use Slack’s Bot token and the Slack API. 
+Slack App Setup: I created a Slack app incoming webhook for our workspace. The simplest method is using an Incoming Webhook URL (which posts to a channel). Alternatively, one can use Slack’s Bot token and the Slack API. 
 
 
 
-In our case, we used the official Slack GitHub Action 
+In my case, I used the official Slack GitHub Action 
 
 Workflow Step for Slack: At the end of the workflow (in the deploy job), we added a step that runs regardless of success or failure:
 
@@ -361,7 +351,7 @@ Setting up kubectl: First, the job installs or ensures kubectl is available. We 
     version: 'v1.27.0'   # match EKS cluster's Kubernetes version
 ```
 
-AWS Credentials in Workflow: Next, we configure AWS credentials in the job environment. We use the AWS Actions module:
+AWS Credentials in Workflow: Next, I configured AWS credentials in the job environment. I used the AWS Actions module:
 
 
 ```
@@ -377,7 +367,7 @@ This exports the AWS creds so that AWS CLI and kubectl (with AWS IAM Auth) can f
 
 
 
-Updating Kubeconfig: To allow kubectl to talk to our EKS cluster, we update the Kubernetes config for the cluster. We did this by running:
+Updating Kubeconfig: To allow kubectl to talk to my EKS cluster, I updated the Kubernetes config for the cluster. I did this by running:
 
 
 ```
@@ -385,12 +375,12 @@ Updating Kubeconfig: To allow kubectl to talk to our EKS cluster, we update the 
   run: aws eks update-kubeconfig --name virtualtechbox-cluster --region us-east-1
 ```
 
-This command fetches the cluster’s endpoint and credentials and merges them into ~/.kube/config on the runner
+This command fetches the cluster’s endpoint and credentials and merges them into ~/.kube/config 
 
  
  Essentially, it makes sure kubectl commands know which cluster to operate on.
 
-Deploying the Application: We have Kubernetes manifest files in our repository (e.g., deployment.yaml and service.yaml) describing how to run our container in EKS. The deployment manifest uses the Docker image we pushed earlier. We apply these manifests:
+Deploying the Application: I have Kubernetes manifest files in my repository (e.g., deployment.yaml and service.yaml) describing how to run my container in EKS. The deployment manifest uses the Docker image I pushed earlier, and I apply these manifests:
 
 
 ```
@@ -424,22 +414,21 @@ GitHub Actions pipeline – “Deploy” job succeeded, showing AWS credentials 
 
 
 
-In the screenshots above, you can see our two workflow jobs in GitHub Actions. The first job runs on ubuntu latest and performs the build, analysis, and scanning steps. The second job then deploys to AWS EKS and notifies Slack. Both jobs have succeeded, indicating our pipeline worked end-to-end.
+In the screenshots above, you can see my two workflow jobs in GitHub Actions. The first job runs on ubuntu-latest and performs the build, analysis, and scanning steps. The second job then deploys to AWS EKS and sends a Slack notification. Both jobs succeeded, which confirms that my pipeline worked end-to-end.
 
 Pipeline Validation and Verification
 
-After the pipeline ran, we performed a few checks to validate that everything worked as expected:
+After the pipeline ran, I performed a few checks to validate that everything worked as expected:
 
-GitHub Actions Logs: We reviewed the workflow run in GitHub Actions (as shown in the screenshots) to ensure each step completed. The logs confirmed that SonarQube analysis was successful (the scanner reported results to our SonarQube server), Trivy scans completed (with output of any findings), the Docker image built and pushed without errors, and the Kubernetes deployment was applied. Seeing green checkmarks on all steps and jobs is a good sign that the CI/CD pipeline executed flawlessly.
+**GitHub Actions Logs:** I reviewed the workflow run in GitHub Actions (as shown in the screenshots) to ensure every step completed successfully. The logs confirmed that my SonarQube analysis was successful (the scanner reported results to my SonarQube server), my Trivy scans completed (with findings printed where applicable), the Docker image built and pushed without errors, and the Kubernetes deployment was applied. Seeing green checkmarks across all steps and jobs showed me that the CI/CD pipeline executed correctly.
 
-SonarQube Dashboard: We logged into SonarQube and checked the project dashboard. The latest analysis corresponding to the pipeline run was present. We could see metrics like code coverage (if configured), code smells, vulnerabilities, etc., giving us confidence in code quality. SonarQube integration means any new issue introduced by a commit would be visible here immediately.
-
+**SonarQube Dashboard:** I logged into SonarQube and checked my project dashboard. The latest analysis from the pipeline run was visible. I could see metrics like code smells, bugs, vulnerabilities, and other quality indicators, which gave me confidence in the stability and maintainability of my code. With SonarQube integrated, any new issue introduced by a commit would appear here immediately.
 
 <img width="1226" height="732" alt="image" src="https://github.com/user-attachments/assets/472f4fab-01b6-438d-b798-10fec36ebf7a" />
 
 
 
-Kubernetes Resources: We used kubectl to verify the application is running in the EKS cluster......
+Kubernetes Resources: i used kubectl to verify the application is running in the EKS cluster......
 
 
 ```
@@ -454,21 +443,29 @@ These commands showed an active Deployment (e.g., swiggy-app deployment with the
 
 
 
-We also port-forwarded or hit the Service’s external LoadBalancer (if configured) to ensure the app was reachable. This confirms the deployment part of the pipeline succeeded and the new Docker image is running on EKS.
+### Live Demo (EKS LoadBalancer)
 
-Slack Message: We checked Slack and found the notification from the pipeline. The message indicated a successful deployment, along with commit info. This real-time confirmation is useful for the team to know the status. In case of a failure, the Slack message would have alerted us immediately with the failure status and we could drill into logs via the GitHub link.
-
-By cross-verifying in SonarQube, the EKS cluster, and Slack, we ensured that each integration in the pipeline (code analysis, security scan, deployment, and notification) worked correctly. The pipeline not only ran without errors, but it also achieved the intended outcomes: high confidence in code & image quality and automated deployment.
+I deployed this application on AWS EKS and exposed it using a Kubernetes **LoadBalancer** Service.  
 
 
 
+<img width="3024" height="1964" alt="image" src="https://github.com/user-attachments/assets/3d7e115c-63dd-4802-b1ac-b97b7b1f8e0d" />
+
+
+
+
+This confirms the deployment part of the pipeline succeeded and the new Docker image is running on EKS.
+
+**Slack Message:** I checked Slack and saw the notification from my pipeline. The message confirmed a successful deployment and included commit information. This real-time confirmation helped me instantly know the pipeline status. If anything had failed, Slack would have alerted me immediately with the failure status, and I could jump straight into the GitHub Actions logs using the link.
+
+By cross-verifying in SonarQube, my EKS cluster, and Slack, I confirmed that every integration in my pipeline (code analysis, security scanning, deployment, and notifications) worked correctly. My pipeline didn’t just run without errors — it achieved the exact outcomes I wanted: strong confidence in code and image quality, plus automated deployment end-to-end.
 ### Cleanup and Teardown
 
 
 
-After validating the pipeline, we cleaned up the resources to avoid ongoing costs and keep the environment tidy:
+After validating the pipeline, I cleaned up the resources to avoid ongoing costs and keep the environment tidy:
 
-Kubernetes Deployments: We deleted the deployed application from the EKS cluster (especially since this was a demo deployment). Using kubectl:
+Kubernetes Deployments: I deleted the deployed application from the EKS cluster (especially since this was a demo deployment). Using kubectl:
 
 
 ```
@@ -478,7 +475,7 @@ kubectl delete service swiggy-app
 
 (Replace swiggy-app with your deployment/service names.) This scales down and removes the app from the cluster.
 
-EKS Cluster: Since the cluster was created for demonstration, we tore it down to avoid AWS charges. We used eksctl to delete the cluster:
+EKS Cluster: Since the cluster was created for demonstration, I tore it down to avoid AWS charges. I used eksctl to delete the cluster:
 
 ```
 eksctl delete cluster --name=virtualtechbox-cluster --region=us-east-1
@@ -490,25 +487,19 @@ eksctl delete cluster --name=virtualtechbox-cluster --region=us-east-1
 
 
 
-This command deletes the EKS control plane and all associated resources (like node groups, networking, etc.). It may take a few minutes to complete. The eksctl output shows the progress of deleting stacks and confirms when everything is deleted
+This command deletes the EKS control plane and all associated resources (like node groups, networking, etc.). It may take a few minutes to complete. The eksctl output shows me the progress of deleting stacks and confirms when everything is fully deleted.
 
 
 
-
-We revoked any temporary credentials or tokens if needed (for example, the SonarQube token or Slack token can be kept for future use, but if this were a one-off, you might remove the project or regenerate tokens). Docker Hub repository can be cleaned if desired by removing the test image tag.
-
-
-
-After these steps, the AWS environment was back to baseline (no cluster, no app running, no EC2), and thus we avoid incurring costs. The repository remains configured, so one can re-provision and rerun the pipeline at any time. Cleanup is a best practice to include in documentation to highlight responsible usage of cloud resources and to demonstrate thoroughness in the DevOps workflow.
+I revoked any temporary credentials or tokens if needed (for example, I can keep the SonarQube token or Slack token for future use, but if this was a one-off setup, I remove the project or regenerate the tokens). I can also clean up my Docker Hub repository by deleting the test image tag if I want to.
 
 
 
-
-
-In conclusion this project’s README has documented how we set up a comprehensive CI/CD pipeline integrating Terraform, GitHub Actions, SonarQube, Trivy, Slack, and AWS EKS. The pipeline automates code quality checks, security scans, Docker builds, and deployment to Kubernetes, reflecting a production-like DevOps lifecycle. By following this approach, teams can achieve rapid and safe code delivery with immediate feedback at each stage. This demonstration not only underscores proficiency in various DevOps tools and practices but also emphasizes the value of automating quality and security into the CI/CD process (DevSecOps) for robust software delivery
+After these steps, my AWS environment returned to baseline (no cluster, no app running, no EC2), which helped me avoid unnecessary costs. My repository remains fully configured, so I can re-provision and rerun the pipeline anytime. Including cleanup in the documentation highlights my responsible cloud usage and shows thoroughness in my DevOps workflow.
 
 
 
+**In conclusion, this project’s README documents how I set up a comprehensive CI/CD pipeline integrating Terraform, GitHub Actions, SonarQube, Trivy, Slack, Docker Hub, and AWS EKS. My pipeline automates code quality checks, security scans, Docker builds, and Kubernetes deployment, reflecting a production-like DevOps lifecycle. By following this approach, I can achieve rapid and safe software delivery with immediate feedback at every stage. This project demonstrates my proficiency across modern DevOps tools and reinforces the value of automating quality and security into CI/CD (DevSecOps) for reliable software delivery.**
 
 
 
