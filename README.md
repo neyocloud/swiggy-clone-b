@@ -1,49 +1,53 @@
 
 ## CI/CD Pipeline with GitHub Actions (Terraform, SonarQube, Trivy, Slack, EKS)
 
-
-Introduction
-
-
+## Introduction
 
 <img width="1454" height="802" alt="image" src="https://github.com/user-attachments/assets/e6a518f0-42f7-4eb0-b91b-89b76dc05613" />
 
+This project demonstrates a full CI/CD DevOps pipeline that builds, analyzes, secures, and deploys a containerized application using GitHub Actions. I designed this pipeline to showcase DevOps best practices end-to-end, from infrastructure provisioning to continuous deployment on Kubernetes. Key components include:
 
+- **Infrastructure as Code (Terraform):** I automated the creation of an AWS EC2 instance to host Docker, SonarQube, and support my CI tooling.
+- **Code Quality Analysis (SonarQube):** I integrated SonarQube for static code analysis to catch bugs, code smells, and maintainability issues early.
+- **Security Scanning (Trivy):** I added Trivy scans on both the source code (filesystem/dependencies) and Docker images to detect vulnerabilities and misconfigurations before deployment.
+- **Containerization (Docker):** I built a Docker image of the application and pushed it to Docker Hub.
+- **Continuous Deployment (EKS):** I deployed the image to an AWS EKS cluster using kubectl/eksctl.
+- **Notifications (Slack):** I configured Slack alerts to notify me of pipeline success/failure in real time.
 
+**My goal was to implement a robust pipeline that enforces quality and security at every stage (SonarQube + Trivy) and automates deployment to a production-like Kubernetes environment (AWS EKS). This end-to-end setup highlights my DevOps/DevSecOps skills across infrastructure, CI/CD automation, security scanning, Docker, Kubernetes, and cloud orchestration.**
 
+---
 
+### Pipeline Flow (High-Level)
 
-This project demonstrates a full CI/CD DevOps pipeline that builds, analyzes, secures, and deploys a containerized application using GitHub Actions. The pipeline is designed to showcase DevOps best practices end-to-end, from infrastructure provisioning to continuous deployment on Kubernetes. Key components include:
+1. I provisioned EC2 with Terraform (Docker + SonarQube installed).
+2. GitHub Actions runs CI on `ubuntu-latest`.
+3. SonarQube scan runs against my EC2 SonarQube server.
+4. Trivy FS scan checks repo for vulnerabilities/secrets/misconfigs.
+5. Docker image is built and pushed to Docker Hub.
+6. Trivy image scan checks the pushed container for CVEs.
+7. Deploy job updates kubeconfig and applies Kubernetes manifests to EKS.
+8. Slack notification posts the pipeline result.
+9. I validated deployment using kubectl + LoadBalancer URL.
+10. I cleaned up Kubernetes resources and the EKS cluster to avoid costs.
 
-Infrastructure as Code (Terraform): Automating creation of an AWS EC2 instance to host a self-hosted GitHub Actions runner, Docker engine, and a SonarQube server.
+---
 
-Code Quality Analysis (SonarQube): Integrating SonarQube for static code analysis to improve code quality (catch bugs, code smells, etc.).
+## Creating the EC2 Infrastructure with Terraform (Runner + SonarQube Host)
 
-Security Scanning (Trivy): Performing security scans on source code (files and dependencies) as well as container images to detect vulnerabilities, misconfigurations, and secrets early.
+To have more control over my CI environment, I used an AWS EC2 instance as the host for Docker and SonarQube. Terraform allowed me to define this infrastructure as code for repeatability and consistency.
 
-Containerization (Docker): Building a Docker image of the application and pushing it to a registry (e.g. Docker Hub).
+### Why this step matters
+- Terraform makes provisioning consistent and auditable.
+- Hosting SonarQube on EC2 gives me a dedicated endpoint for analysis reports.
+- It mirrors real DevOps setups where CI tools run on managed servers.
 
-Continuous Deployment to Kubernetes (EKS): Deploying the Docker image to an AWS EKS (Elastic Kubernetes Service) cluster using kubectl/eksctl, demonstrating Kubernetes deployment automation.
+### Terraform setup + provisioning
 
-Notifications (Slack): Sending Slack notifications on pipeline results for real-time feedback to the team.
-
-
-
-**The goal is to implement a robust pipeline that ensures code quality and security at each stage (using SonarQube and Trivy scans) and automates deployment to a production-like environment (AWS EKS). This end-to-end setup highlights strong DevOps skills in infrastructure provisioning, CI/CD automation, security (DevSecOps), and cloud orchestration, which would be clear and impressive to recruiters and interviewers.*
-
-Creating the EC2 Infrastructure with Terraform (Self-Hosted Runner Host)
-To have more control over the CI environment, I used a self-hosted GitHub Actions runner on AWS. I provisioned an EC2 instance using Terraform as my runner host (which also runs Docker and SonarQube). Terraform allowed me to define this infrastructure as code, ensuring repeatability and consistency. Key steps include:
-
-Terraform Configuration: I wrote Terraform configs to define an EC2 instance (Ubuntu 20.04) with the required security group rules. For example, I opened port 22 for SSH, port 9000 for SonarQube’s web UI, and any needed ports for runner communication (GitHub runners use outbound HTTPS).
-
-Applying Terraform: Using Termius (or any terminal), I ran Terraform commands to create the resources:
-
-
-```
+```bash
 terraform init            # Initialize Terraform and AWS provider
 terraform plan
 terraform apply -auto-approve   # Create EC2 instance and related infrastructure
-
 ```
 
 After apply, Terraform outputs the new EC2’s public IP.
