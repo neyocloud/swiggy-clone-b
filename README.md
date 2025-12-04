@@ -75,11 +75,11 @@ For a production-grade setup, SonarQube would use an external database and more 
 
 
 
-Running CI on GitHub-Hosted Runner (ubuntu-latest)
+## Running CI on GitHub-Hosted Runner (ubuntu-latest)
 
-With the EC2 server up and running Docker and SonarQube, the next step was to run our CI pipeline using a GitHub-hosted runner instead of a self-hosted one. This means the workflow executes on GitHub’s infrastructure (ubuntu-latest), and connects to the tools we set up on EC2 over the network.
+With the EC2 server up and running Docker and SonarQube, the next step was to run my CI pipeline using a GitHub-hosted runner instead of a self-hosted one. This means the workflow executes on GitHub’s infrastructure (ubuntu-latest), and connects to the tools I set up on EC2 over the network.
 
-Using a GitHub-Hosted Runner: In our GitHub Actions workflow, i didn’t add or register any self-hosted runner. Instead, I kept the default GitHub runner by specifying ubuntu-latest in the YAML. For example:
+Using a GitHub-Hosted Runner: In my GitHub Actions workflow, i didn’t add or register any self-hosted runner. Instead, I kept the default GitHub runner by specifying ubuntu-latest in the YAML. For example:
 
 ```
 jobs:
@@ -105,23 +105,23 @@ SonarQube Scan Connection: Since the runner was not on the EC2 server, it couldn
 
 
 
-Overall, this approach avoided the extra step of configuring a self-hosted runner and kept the CI setup simple, while still letting us run builds and push code quality reports to SonarQube.
+Overall, this approach avoided the extra step of configuring a self-hosted runner and kept the CI setup simple, while still letting me run builds and push code quality reports to SonarQube.
 
 
 
 ## Security Scanning of Source Code with Trivy (FS Scan)
 
-Security is integrated early in the pipeline using Trivy. This is an open-source security scanner by Aqua Security. We first perform a file system scan (Trivy FS) on the source repository to catch any known vulnerabilities or misconfigurations in code and dependencies before building the application. This is part of “shift-left” security in CI (DevSecOps)
+Security is integrated early in the pipeline using Trivy. This is an open-source security scanner by Aqua Security. I first perform a file system scan (Trivy FS) on the source repository to catch any known vulnerabilities or misconfigurations in code and dependencies before building the application. This is part of “shift-left” security in CI (DevSecOps)
 
 
 What is Trivy FS Scans: Trivy’s filesystem scan can detect vulnerabilities in open-source packages, config issues in infrastructure-as-code (like Terraform or Kubernetes manifests), and even secret exposures in the codebase
 
 
-By including this scan, we ensure that things like outdated libraries or insecure configurations are flagged early, preventing them from reaching production
+By including this scan, I ensure that things like outdated libraries or insecure configurations are flagged early, preventing them from reaching production
 
 
 
-Running Trivy in the Workflow: We integrated Trivy via a GitHub Action. after code checkout, we added:
+Running Trivy in the Workflow: I integrated Trivy via a GitHub Action. after code checkout, I added:
 
 
 
@@ -141,7 +141,7 @@ Running Trivy in the Workflow: We integrated Trivy via a GitHub Action. after co
 This action downloads Trivy and scans the code (all folders) for vulnerabilities, secrets, and misconfigurations
 
 
-I allowed the job to continue even if issues are found (exit-code: 0), so that the pipeline can proceed (you might instead fail the build on high-severity issues in a stricter scenario). The results are logged in the workflow. For instance, Trivy would list any CVEs in our application dependencies, any AWS credential leaks or hardcoded secrets, and any insecure configurations (like a Terraform file with an open security group). This automated scan helps “identify vulnerabilities before they make it to production”
+I allowed the job to continue even if issues are found (exit-code: 0), so that the pipeline can proceed (you might instead fail the build on high-severity issues in a stricter scenario). The results are logged in the workflow. For instance, Trivy would list any CVEs in my application dependencies, any AWS credential leaks or hardcoded secrets, and any insecure configurations (like a Terraform file with an open security group). This automated scan helps “identify vulnerabilities before they make it to production”
 
 
 
@@ -162,7 +162,7 @@ After code is analyzed and cleared, the pipeline builds a Docker image for the a
 
 
 
-Building the Docker Image: In the GitHub Actions workflow, I used Docker to build the image from our Dockerfile. Since we have Docker installed, we can either run Docker commands directly or use the Docker Buildx GitHub Action. We opted to run the commands directly for transparency. For example, our workflow has a step:
+Building the Docker Image: In the GitHub Actions workflow, I used Docker to build the image from my Dockerfile. Since I have Docker installed, I can either run Docker commands directly or use the Docker Buildx GitHub Action. I opted to run the commands directly for transparency. For example, my workflow has a step:
 
 
 ```
@@ -172,7 +172,7 @@ Building the Docker Image: In the GitHub Actions workflow, I used Docker to buil
 
 This instructs Docker to build an image tagged myapp:latest from the repository’s Dockerfile. (If needed, I could also build multiple tags, e.g., commit SHA tag for versioning.)
 
-Authenticating to Registry: I chose Docker Hub as the container registry (for simplicity and because our EKS cluster can pull public images from Docker Hub easily). We created a Docker Hub repository and added our Docker Hub credentials (username and an access token) as GitHub secrets. These secrets (DOCKER_USERNAME and DOCKERHUB_TOKEN) allow the workflow to log in to Docker Hub
+Authenticating to Registry: I chose Docker Hub as the container registry (for simplicity and because my EKS cluster can pull public images from Docker Hub easily). I created a Docker Hub repository and added my Docker Hub credentials (username and an access token) as GitHub secrets. These secrets (DOCKER_USERNAME and DOCKERHUB_TOKEN) allow the workflow to log in to Docker Hub
 docs.docker.com
 
 
@@ -229,7 +229,7 @@ After pushing the Docker image, my pipeline performed a Trivy scan on the image 
 This pulls the newly built image from Docker Hub and scans it for vulnerabilities
 
 
-The scan results (a table of any found CVEs with severity) are printed in the job log. In a stricter pipeline, one could choose to fail the build if high/critical vulnerabilities are found, but here we report them while allowing deployment to proceed (the goal is to demonstrate the scan itself).
+The scan results (a table of any found CVEs with severity) are printed in the job log. In a stricter pipeline, one could choose to fail the build if high/critical vulnerabilities are found, but here I reported them while allowing deployment to proceed (the goal is to demonstrate the scan itself).
 
 
 
@@ -271,13 +271,13 @@ Immediate failure alerts can significantly reduce time to response and fix, impr
 
 
 
-Slack App Setup: I created a Slack app incoming webhook for our workspace. The simplest method is using an Incoming Webhook URL (which posts to a channel). Alternatively, one can use Slack’s Bot token and the Slack API. 
+Slack App Setup: I created a Slack app incoming webhook for my workspace. The simplest method is using an Incoming Webhook URL (which posts to a channel). Alternatively, one can use Slack’s Bot token and the Slack API. 
 
 
 
 In my case, I used the official Slack GitHub Action 
 
-Workflow Step for Slack: At the end of the workflow (in the deploy job), we added a step that runs regardless of success or failure:
+Workflow Step for Slack: At the end of the workflow (in the deploy job), I added a step that runs regardless of success or failure:
 
 
 ```
@@ -296,11 +296,11 @@ Workflow Step for Slack: At the end of the workflow (in the deploy job), we adde
 
 
 
-This uses Slack’s official action to post a message to the channel with details. We include the job status (success or failure) and some context like repo, branch, etc.
+This uses Slack’s official action to post a message to the channel with details. I included the job status (success or failure) and some context like repo, branch, etc.
 
 
 
-The if: always() ensures the Slack step runs even if earlier steps fail, so we get notified on both success and failure. For example, a successful run would post a green-check message, whereas a failure would alert with a red-x and logs link. Slack notifications mean no one misses a broken build – it's an essential part of a robust CI/CD pipeline.
+The if: always() ensures the Slack step runs even if earlier steps fail, so I got notified on both success and failure. For example, a successful run would post a green-check message, whereas a failure would alert with a red-x and logs link. Slack notifications mean no one misses a broken build – it's an essential part of a robust CI/CD pipeline.
 
 
 
@@ -315,9 +315,9 @@ The if: always() ensures the Slack step runs even if earlier steps fail, so we g
 
 ### Creating an EKS Cluster with eksctl
 
-For the deployment environment, I made use Amazon Elastic Kubernetes Service (EKS) to host our application in a Kubernetes cluster. I provisioned a new EKS cluster using eksctl, which is a handy CLI to create EKS clusters quickly.
+For the deployment environment, I made use Amazon Elastic Kubernetes Service (EKS) to host my application in a Kubernetes cluster. I provisioned a new EKS cluster using eksctl, which is a handy CLI to create EKS clusters quickly.
 
-eksctl Cluster Creation: We ran the following command from our terminal to create a cluster (the EC2 runner or any machine with AWS CLI/eksctl configured could run this, but we did it locally for setup):
+eksctl Cluster Creation: I ran the following command from my terminal to create a cluster (the EC2 runner or any machine with AWS CLI/eksctl configured could run this, but I did it locally for setup):
 
 
 ```
@@ -329,9 +329,9 @@ This command creates a managed EKS cluster named “virtualtechbox-cluster” in
 
 
 
-AWS Credentials: We ensured that the AWS credentials used for cluster creation have the necessary permissions (IAM role or user with EKS and EC2 permissions). In our pipeline, we also need AWS credentials to deploy to EKS. We stored an IAM user’s access key and secret (with appropriate EKS/Kubernetes permissions) in GitHub Secrets (AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY). The pipeline uses these for authenticating to AWS.
+AWS Credentials: I ensured that the AWS credentials used for cluster creation have the necessary permissions (IAM role or user with EKS and EC2 permissions). In my pipeline, I also need AWS credentials to deploy to EKS. I stored an IAM user’s access key and secret (with appropriate EKS/Kubernetes permissions) in GitHub Secrets (AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY). The pipeline uses these for authenticating to AWS.
 
-kubectl and Config: The cluster’s credentials from eksctl can be used in the GitHub Actions environment. We either exported the kubeconfig as an artifact or re-generated it in the workflow. A simpler approach in Actions is to use the AWS CLI to re-create kubeconfig on the runner, which we’ll do in the next section.
+kubectl and Config: The cluster’s credentials from eksctl can be used in the GitHub Actions environment. I either exported the kubeconfig as an artifact or re-generated it in the workflow. A simpler approach in Actions is to use the AWS CLI to re-create kubeconfig on the runner, which I’ll do in the next section.
 
 (Note: For a real production scenario, one might use infrastructure-as-code (Terraform or CloudFormation) for EKS as well, but eksctl is sufficient and faster for this demonstration.)
 
@@ -340,11 +340,11 @@ kubectl and Config: The cluster’s credentials from eksctl can be used in the G
 
 ### Deploying to EKS via GitHub Actions
 
-With the EKS cluster ready, the second job of our GitHub Actions workflow handles deploying the latest Docker image to the cluster. This job runs after the build/scan job, and only if the first part succeeds. It uses AWS credentials and kubectl to apply Kubernetes manifests.
+With the EKS cluster ready, the second job of my GitHub Actions workflow handles deploying the latest Docker image to the cluster. This job runs after the build/scan job, and only if the first part succeeds. It uses AWS credentials and kubectl to apply Kubernetes manifests.
 
-Job Dependencies: Our workflow is configured so that the “Deploy” job depends on the “Build-Analyze-Scan” job. In YAML, we set needs: [build-scan] for the deploy job. This ensures we only deploy if the build, analysis, and scans were successful.
+Job Dependencies: My workflow is configured so that the “Deploy” job depends on the “Build-Analyze-Scan” job. In YAML, I set needs: [build-scan] for the deploy job. This ensures I only deploy if the build, analysis, and scans were successful.
 
-Setting up kubectl: First, the job installs or ensures kubectl is available. We used the azure/setup-kubectl@v2 action (a GitHub-maintained action) to install a specific kubectl version compatible with our EKS version
+Setting up kubectl: First, the job installs or ensures kubectl is available. I used the azure/setup-kubectl@v2 action (a GitHub-maintained action) to install a specific kubectl version compatible with my EKS version
 
  
  For example:
